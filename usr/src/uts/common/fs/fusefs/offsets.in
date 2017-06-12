@@ -1,0 +1,153 @@
+\
+\ CDDL HEADER START
+\
+\ The contents of this file are subject to the terms of the
+\ Common Development and Distribution License (the "License").
+\ You may not use this file except in compliance with the License.
+\
+\ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+\ or http://www.opensolaris.org/os/licensing.
+\ See the License for the specific language governing permissions
+\ and limitations under the License.
+\
+\ When distributing Covered Code, include this CDDL HEADER in each
+\ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+\ If applicable, add the following below this CDDL HEADER, with the
+\ fields enclosed by brackets "[]" replaced with your own identifying
+\ information: Portions Copyright [yyyy] [name of copyright owner]
+\
+\ CDDL HEADER END
+\
+
+\
+\ Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+\ Use is subject to license terms.
+\
+\ Copyright 2012 Nexenta Systems, Inc.  All rights reserved.
+\
+
+\
+\ offsets.in: input file for the ctfstabs program,
+\ used to generate ioc_check.h - which verifies
+\ invariance of our ioctl data structures across
+\ 32-bit and 64-bit ABIs.
+\
+
+#ifndef	_GENASSYM
+#define	_GENASSYM
+#endif
+
+#include <sys/types.h>
+#include <sys/dirent.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/fs/fuse_door.h>
+
+\ from fuse_ktypes.h
+
+fuse_statvfs
+	f_blocks
+	f_bfree
+	f_bavail
+	f_files
+	f_ffree
+	f_favail
+	f_bsize
+	f_frsize
+	f_namemax
+
+fuse_stat
+	st_ino
+	st_size
+	st_blocks
+	st_atime_sec
+	st_mtime_sec
+	st_ctime_sec
+	st_atime_ns
+	st_mtime_ns
+	st_ctime_ns
+	st_mode
+	st_nlink
+	st_uid
+	st_gid
+	st_rdev
+	st_blksize
+
+fuse_dirent
+	d_ino
+	d_off
+	d_nmlen
+	d_name
+
+\ from fuse_door.h
+
+fuse_fid_arg
+	arg_opcode	FID_ARG_OPCODE
+	arg_flags	FID_ARG_FLAGS
+	arg_fid		FID_ARG_FID
+
+fuse_fid_ret
+	ret_err		FID_RET_ERR
+	ret_flags	FID_RET_FLAGS
+	ret_fid		FID_RET_FID
+
+fuse_statvfs_ret
+	ret_err		STATVFS_RET_ERR
+	ret_flags	STATVFS_RET_FLAGS
+	ret_stvfs	STATVFS_RET_STVFS
+
+fuse_getattr_ret
+	ret_err		GETATTR_RET_ERR
+	ret_flags	GETATTR_RET_FLAGS
+	ret_st		GETATTR_RET_ST
+
+fuse_path_arg
+	arg_val		PATH_ARG_VAL
+	arg_pathlen	PATH_ARG_PATHLEN
+	arg_path	PATH_ARG_PATH
+
+fuse_path2_arg
+	arg_flags	PATH2_ARG_FLAGS
+	arg_p1len	PATH2_ARG_P1LEN
+	arg_p2len	PATH2_ARG_P2LEN
+	arg_path1	PATH2_ARG_PATH1
+	arg_path2	PATH2_ARG_PATH2
+
+fuse_readdir_ret
+	ret_err		READDIR_RET_ERR
+	ret_flags	READDIR_RET_FLAGS
+	ret_st		READDIR_RET_ST
+	ret_de		READDIR_RET_DE
+
+fuse_read_arg
+	arg_fid		READ_ARG_FID
+	arg_offset	READ_ARG_OFFSET
+	arg_length	READ_ARG_LENGTH
+	arg_pathlen	READ_ARG_PATHLEN
+	arg_path	READ_ARG_PATH
+
+fuse_write_arg
+	arg_fid		WRITE_ARG_FID
+	arg_offset	WRITE_ARG_OFFSET
+	arg_length	WRITE_ARG_LENGTH
+	arg_pathlen	WRITE_ARG_PATHLEN
+	arg_path	WRITE_ARG_PATH
+
+fuse_ftrunc_arg
+	arg_flags	FTRUNC_ARG_FLAGS
+	arg_fid		FTRUNC_ARG_FID
+	arg_offset	FTRUNC_ARG_OFFSET
+	arg__pad	FTRUNC_ARG__PAD
+	arg_pathlen	FTRUNC_ARG_PATHLEN
+	arg_path	FTRUNC_ARG_PATH
+
+fuse_utimes_arg
+	arg_flags	UTIMES_ARG_FLAGS
+	arg_atime	UTIMES_ARG_ATIME
+	arg_mtime	UTIMES_ARG_MTIME
+	arg_atime_ns	UTIMES_ARG_ATIME_NS
+	arg_mtime_ns	UTIMES_ARG_MTIME_NS
+	arg__pad	UTIMES_ARG__PAD
+	arg_pathlen	UTIMES_ARG_PATHLEN
+	arg_path	UTIMES_ARG_PATH
+

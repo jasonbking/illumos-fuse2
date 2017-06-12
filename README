@@ -1,0 +1,149 @@
+
+This is a proof-of-concept implementation of FUSE
+for illumos (www.illumos.org)
+
+
+Background:
+
+FUSE stands for "File System in User Space".  See:
+  http://sourceforge.net/projects/fuse/
+
+It has two main components: a kernel file system module,
+which is basically just plumbing, and a "FUSE daemon"
+which runs in user space and implements all the real
+file system operations via calls to some "back end".
+There are many "back end" implementations which may
+be linked with a system's libfuse, which together
+allow "fusefs" mounts.
+
+There is prior work on a FUSE implementation for
+OpenSolaris, described here:
+  http://hub.opensolaris.org/bin/view/Project+fuse/
+This PoC is not meant to detract from the good effort
+made by that project.  Rather, this is a scholarly
+investigation of an alternative approach.
+
+
+Introduction:
+
+There are a couple ideas being investigated here:
+
+1: VFS API adaptation - borrow from smbfs.
+2: Use doors to communicate with the daemon.
+
+1: VFS API adaptation
+
+It became apparent during work on the smbfs project
+that both smbfs and fuse need to solve a very similar
+problem, which is to adapt an in-kernel VFS-style
+interface to a user-space libc-style interface.
+
+For example, at the VFS layer we never get the whole
+path name to a particular file.  Instead, we get a
+series of VOP_LOOKUP calls, one for each component
+of the path to the file.  In both smbfs and fusefs,
+something has to reconstruct the full path and give
+that to the "back end".  (The "back end" in smbfs
+is an SMB server.  In FUSE it's a the FUSE daemon.)
+
+The smbfs project provided an efficient mechanism for
+reconstructing full path names for the "back end".
+Doing this in the FS module can greatly reduce the
+number of "up calls" needed to the FUSE daemon.
+It also provides a "node cache" that supports fast
+"reclaim" of nodes that recently became inactive.
+This turns out to be important in the Solaris VFS,
+because the genunix code above the VFS layer will
+frequently makes vnodes inactive and then lookup
+the same node.  (This has been observed to happen
+as many as five times per line of an "ls -l"!)
+
+By borrowing the smbfs node cache implementation,
+we can quickly get to a solution to both of the
+above challenges for FUSE.
+
+2: Use doors...
+
+FUSE normally uses a message passing channel, known
+in the libfuse sources as "fuse_kern_chan" etc.
+That's a reasonable solution for a lot of systems,
+but Solaris has this really cool feature called
+"doors", which are a very efficient IPC mechanism.
+The other idea being investigated here is to use
+doors as the communication mechanism to the FUSE
+daemon.
+
+Another handy "wind fall" of the above choices is
+that he "back-end" calls needed by smbfs are close
+to the "fuse operations" vector implemented by most
+FUSE back-ends.  We can entirely bypass the whole
+"fuse lowlevel" mechanism found in libfuse (a large
+complex module that basically _also_ solves the above
+described VFS API adaptation problem).  Instead, the
+door calls up to the FUSE daemon will closely mirror
+the "fuse operations" vector provided by back ends.
+
+
+Project Status:
+
+The in-kernel component is largely complete and can be
+used to demonstrate "read mostly" access to arbitrary
+FUSE back ends.  (It's "read mostly" because most of
+the modifying operations are not yet implemented.)
+
+You should be able to build this on a recent illumos
+system (see: http://www.illumos.org) and then install
+using the provided install script: Install-fuse
+
+
+Suggestions for further work:
+
+It would be great if someone were to complete the other
+functions in uts/common/fs/fusefs/fusefs_calls.c
+(and see below for a general overview of the sources). 
+Add structs as needed to uts/common/sys/fs/fuse_door.h,
+and implement the remaining FUSE_OP_ door calls in:
+lib/libfuse/common/fuse_ll_doorsvc.c: sol_dispatch()
+Most should end up calling one fuse_fs_* function.
+
+There are some interesting little test components that
+one can use to check functoinality of fusefs and/or the
+FUSE daemon independently of other components.
+
+In $SRC/cmd/fs.d/fuse/  see:
+
+fuse-dmn
+
+  This is a "stubbed out" door service that implements
+  the same door calls as the real FUSE daemon.  I used
+  this during development of the fusefs module to help
+  test the fusefs code independently of the FUSE daemon.
+
+fuse-cli
+
+  This is a trivial client for the same door service as
+  described in fuse-dmn above.  One can use this to test
+  the FUSE daemon independently of the fusefs module.
+
+dtrace
+
+  Here you'll find some handy dtrace(1m) scripts.
+
+example
+
+  These are (most of) the examples that come with FUSE
+  setup to build easily in the illumos build.  These
+  get installed in /usr/lib/fuse/* (for lack of a
+  better place).
+
+
+Source code overview:
+
+Here is a list of all the places you might want to look:
+(prepend $SRC to all of these)
+
+	uts/common/sys/fs/fuse*		(headers)
+	uts/common/fs/fusefs/*		(kernel module)
+	lib/libfuse/*			(the library)
+	cmd/fs.d/fuse/*			(commands)
+	Install-fuse			(install script)

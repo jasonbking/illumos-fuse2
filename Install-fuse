@@ -1,0 +1,120 @@
+#!/bin/ksh
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+#
+
+cpu=`uname -p`
+
+# Where is destination?
+if [ "$1" ] ; then
+  DEST=$1
+fi
+
+# Where is PROTO? (arg? env? proto?)
+if [ "$2" ] ; then
+  PROTO=$2
+elif [ "$ROOT" ] ; then
+  PROTO=$ROOT
+elif [ -d ./proto ] ; then
+  PROTO=`pwd`/proto/root_$cpu
+else
+  echo "ROOT env?"
+  exit 1
+fi
+
+case $cpu in
+i386)
+	ARCH64=amd64
+	;;
+sparc)
+	ARCH64=sparcv9
+	;;
+*)  echo "Huh?" ; exit 1;;
+esac
+
+# Stop on error, and make noise
+set -e
+
+# Stop the service
+# svcadm disable svc:/...
+
+# Unload old fusefs
+modinfo |grep ' fusefs .FUSE' |while read i junk
+do
+  modunload -i $i
+done
+
+# Make directories...
+while read d
+do
+  [ -d $DEST/$d ] || mkdir $DEST/$d
+done <<EOF
+usr/lib/fuse
+usr/lib/fs/fusefs
+usr/include/fuse
+EOF
+
+# Copy in the new binaries
+while read f
+do
+  cmp -s $PROTO/$f $DEST/$f || {
+    echo "update $DEST/$f"
+    if [ -f $PROTO/$f ] ; then
+      if [ -f $DEST/$f.orig ] ; then
+        rm -f $DEST/$f || :
+      else
+        mv $DEST/$f $DEST/$f.orig || :
+      fi
+    fi
+    echo "Update $f"
+    cp $PROTO/$f $DEST/$f
+  }
+done <<EOF
+usr/kernel/fs/${ARCH64}/fusefs
+usr/kernel/fs/fusefs
+usr/lib/fs/fusefs/mount
+usr/lib/fs/fusefs/umount
+usr/lib/fuse/fioc
+usr/lib/fuse/fioclient
+usr/lib/fuse/fsel
+usr/lib/fuse/fselclient
+usr/lib/fuse/fuse-cli
+usr/lib/fuse/fuse-dmn
+usr/lib/fuse/fusefs.d
+usr/lib/fuse/fusexmp
+usr/lib/fuse/hello
+usr/lib/fuse/null
+usr/lib/fuse/pkg-config
+usr/lib/libfuse.so.2.8
+usr/include/fuse/fuse.h
+usr/include/fuse/fuse_common.h
+usr/include/fuse/fuse_common_compat.h
+usr/include/fuse/fuse_compat.h
+usr/include/fuse/fuse_lowlevel.h
+usr/include/fuse/fuse_lowlevel_compat.h
+usr/include/fuse/fuse_opt.h
+EOF
+
+chmod 4555 $DEST/usr/lib/fs/fusefs/mount
+chmod 4555 $DEST/usr/lib/fs/fusefs/umount
+[ -s $DEST/usr/lib/libfuse.so ] ||
+  ln -s libfuse.so.2.8 $DEST/usr/lib/libfuse.so
+
+if [ -z "$DEST" ]
+then
+
+  modload -p fs/fusefs
+  modinfo |grep FUSEFS
+
+fi
